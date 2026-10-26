@@ -1,0 +1,14 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme {
+  --color-navy: #172B3A;
+  --color-teal: #0F766E;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-100 text-slate-800 antialiased;
+    font-family: "Inter", system-ui, sans-serif;
+  }
+}
