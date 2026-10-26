@@ -31,3 +31,26 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Back-end (Java/Maven)
+target/
+*.log
+.mvn/wrapper/maven-wrapper.jar
+
+# Front-end (Node/Vite)
+node_modules/
+dist/
+.vite/
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# Sistema Operacional
+.DS_Store
+Thumbs.db
+
+# Arquivos de ambiente (segredos)
+.env
+.env.local
