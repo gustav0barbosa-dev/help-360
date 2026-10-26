@@ -1,26 +1,27 @@
 package com.help.config;
 
-import com.help.repository.UsuarioRepository;
-import com.help.security.SecurityFilter;
+import java.util.List;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import com.help.security.SecurityFilter;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity // Habilita @PreAuthorize
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final SecurityFilter securityFilter;
@@ -30,33 +31,32 @@ public class SecurityConfig {
     }
 
     @Bean
-    public UserDetailsService userDetailsService(UsuarioRepository usuarioRepository) {
-        return username -> usuarioRepository.findByEmail(username)
-                .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado: " + username));
-    }
-
-    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
+                // Habilita o CORS dentro do Security
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        // 1. ROTAS PÚBLICAS (primeiro)
+                        // Libera o preflight (OPTIONS) para todas as rotas
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        
+                        // Rotas Públicas
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
 
-                        // 2. ROTAS ADMIN
+                        // Rotas ADMIN
                         .requestMatchers("/api/v1/empresas/**", "/api/v1/areas/**",
-                                        "/api/v1/sistemas/**", "/api/v1/categorias/**",
-                                        "/api/v1/usuarios/**", "/api/v1/relatorios/**").hasRole("ADMIN")
+                                         "/api/v1/sistemas/**", "/api/v1/categorias/**",
+                                         "/api/v1/usuarios/**", "/api/v1/relatorios/**").hasRole("ADMIN")
 
-                        // 3. ROTAS ATENDENTE/ADMIN
+                        // Rotas ATENDENTE/ADMIN
                         .requestMatchers(HttpMethod.POST, "/api/v1/apontamentos/**").hasAnyRole("ATENDENTE", "ADMIN")
 
-                        // 4. ROTAS AUTENTICADAS (anexos, etc)
+                        // Rotas Autenticadas
                         .requestMatchers("/api/v1/anexos/**", "/api/v1/tickets/*/anexos/**").authenticated()
 
-                        // 5. QUALQUER OUTRA ROTA (SEMPRE POR ÚLTIMO)
+                        // Qualquer outra rota (SEMPRE POR ÚLTIMO)
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
@@ -64,12 +64,21 @@ public class SecurityConfig {
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        // Permite o front-end React (Vite) na porta 5173
+        config.setAllowedOriginPatterns(List.of("http://localhost:5173")); 
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 }
