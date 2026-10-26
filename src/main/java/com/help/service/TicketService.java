@@ -130,7 +130,7 @@ public class TicketService {
             throw new RegraDeNegocioException("Ticket não pode ser fechado no status atual.");
         }
 
-        ticket.setStatus(StatusTicket.RESOLVIDO);
+        ticket.setStatus(StatusTicket.FECHADO);
         ticket.setDataSolucao(LocalDateTime.now());
 
         return converterParaDTO(ticketRepository.save(ticket));
